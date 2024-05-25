@@ -15,7 +15,8 @@ var (
 	MODE_SERVER  = false
 	CERT_FILE    = ""
 	PORT_NUMBER  = 4242
-  MTYPE         = ""
+  MTYPE        = ""
+  DATA         = ""
 
 	//SERVER PARAMETERS
 	SERVER_IP = "0.0.0.0"
@@ -43,6 +44,8 @@ func processFlags() {
 		SERVER_ADDR, "[client mode] server address")
 	flag.StringVar(&MTYPE, "mtype",
 		MTYPE, "message type")
+	flag.StringVar(&DATA, "data",
+		DATA, "pipe-delimited message data")
 
 	flag.IntVar(&PORT_NUMBER, "port",
 		PORT_NUMBER, "port number")
@@ -77,9 +80,9 @@ func main() {
     */
 	  switch MTYPE {
 	  case "connect":
-	  	client.Run(pdu.TYPE_CLIENT_CONNECT)
+	  	client.Run(pdu.TYPE_CLIENT_CONNECT, DATA)
 	  default:
-	  	client.Run(pdu.TYPE_DATA)
+	  	client.Run(pdu.TYPE_DATA, DATA)
 	  }
 
 	} else {

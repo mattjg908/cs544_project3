@@ -45,7 +45,7 @@ func NewClient(cfg ClientConfig) *Client {
 	return cli
 }
 
-func (c *Client) Run(mtype uint8) error {
+func (c *Client) Run(mtype uint8, s string) error {
 	serverAddr := fmt.Sprintf("%s:%d", c.cfg.ServerAddr, c.cfg.PortNumber)
 	conn, err := quic.DialAddr(c.ctx, serverAddr, c.tls, nil)
 	if err != nil {
@@ -53,17 +53,17 @@ func (c *Client) Run(mtype uint8) error {
 		return err
 	}
 	c.conn = conn
-	return c.protocolHandler(mtype)
+	return c.protocolHandler(mtype, s)
 }
 
-func (c *Client) protocolHandler(mtype uint8) error {
+func (c *Client) protocolHandler(mtype uint8, s string) error {
 	stream, err := c.conn.OpenStreamSync(c.ctx)
 	if err != nil {
 		log.Printf("[cli] error opening stream %s", err)
 		return err
 	}
 
-	req := pdu.NewPDU(mtype, []byte("hello from client"))
+	req := pdu.NewPDU(mtype, []byte(s))
 	pduBytes, err := pdu.PduToBytes(req)
 	if err != nil {
 		log.Printf("[cli] error making pdu byte array %s", err)

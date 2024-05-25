@@ -10,6 +10,11 @@ import (
 	"drexel.edu/net-quic/pkg/util"
 	"github.com/quic-go/quic-go"
 )
+const (
+	// Temp. hardcoded values
+	USER_PWD = "password123"
+
+)
 
 type ServerConfig struct {
 	GenTLS   bool
