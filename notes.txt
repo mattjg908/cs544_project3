@@ -1,0 +1,9 @@
+User can connect if password correct, server returns error if not
+
+User can message other connected users
+
+Server can connect to other server if password correct, server returns error if not
+
+Servers route messages to other servers for users
+
+Users can mark away/returned

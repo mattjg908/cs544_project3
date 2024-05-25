@@ -9,6 +9,7 @@ const (
 	// PDU types
 	TYPE_DATA = 0
 	TYPE_ACK  = 1
+  TYPE_CLIENT_CONNECT = 2
 
 	MAX_PDU_SIZE = 1024
 )
@@ -37,6 +38,8 @@ func (pdu *PDU) GetTypeAsString() string {
 		return "***DATA"
 	case TYPE_ACK:
 		return "****ACK"
+	case TYPE_CLIENT_CONNECT:
+		return "****CONNECT"
 	default:
 		return "UNKNOWN"
 	}

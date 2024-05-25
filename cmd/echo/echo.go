@@ -5,6 +5,7 @@ import (
 
 	"drexel.edu/net-quic/pkg/client"
 	"drexel.edu/net-quic/pkg/server"
+	"drexel.edu/net-quic/pkg/pdu"
 )
 
 var (
@@ -14,6 +15,7 @@ var (
 	MODE_SERVER  = false
 	CERT_FILE    = ""
 	PORT_NUMBER  = 4242
+  MTYPE         = ""
 
 	//SERVER PARAMETERS
 	SERVER_IP = "0.0.0.0"
@@ -39,6 +41,8 @@ func processFlags() {
 		SERVER_IP, "[server mode] tls key file")
 	flag.StringVar(&SERVER_ADDR, "server-addr",
 		SERVER_ADDR, "[client mode] server address")
+	flag.StringVar(&MTYPE, "mtype",
+		MTYPE, "message type")
 
 	flag.IntVar(&PORT_NUMBER, "port",
 		PORT_NUMBER, "port number")
@@ -64,7 +68,20 @@ func main() {
 			CertFile:   CERT_FILE,
 		}
 		client := client.NewClient(clientConfig)
-		client.Run()
+
+    /* it's nicer for the user to do
+       $ go run cmd/echo/echo.go -client -mtype=connect
+
+       rather than
+       $ go run cmd/echo/echo.go -client -mtype=2
+    */
+	  switch MTYPE {
+	  case "connect":
+	  	client.Run(pdu.TYPE_CLIENT_CONNECT)
+	  default:
+	  	client.Run(pdu.TYPE_DATA)
+	  }
+
 	} else {
 		serverConfig := server.ServerConfig{
 			GenTLS:   GENERATE_TLS,

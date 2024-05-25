@@ -3,7 +3,7 @@
 There is a single binary that is used to run both the client and the server
 
 - `server`: `go run cmd/echo/echo.go -server`
-- `client`: `go run cmd/echo/echo.go -client`
+- `client`: `go run cmd/echo/echo.go -client -mtype=connect`
 - `help on all flags`: `go run cmd/echo/echo.go -help`
 
 The server will wait for a connection, just a simple echo.  This solution uses goroutines and is concurrent.
