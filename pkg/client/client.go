@@ -1,12 +1,12 @@
 package client
 
 import (
-  "bufio"
+	"bufio"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
-  "os"
+	"os"
 
 	"drexel.edu/net-quic/pkg/pdu"
 	"drexel.edu/net-quic/pkg/util"
@@ -94,30 +94,29 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	log.Printf("[cli] got response: %s", rsp.ToJsonString())
 	log.Printf("[cli] decoded string: %s", rspDataString)
 
-  // start of user input
+	// start of user input
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("Enter messages to send to the server. Type 'exit' to quit.")
 	for scanner.Scan() {
 		msg := scanner.Text()
-	  switch msg {
-	  case "exit":
-	    return stream.Close()
-	  case "list":
-	    req := pdu.NewPDU(pdu.TYPE_LIST, []byte(""))
-	    pduBytes, err := pdu.PduToBytes(req)
-	    if err != nil {
-	    	log.Printf("[cli] error making pdu byte array %s", err)
-	    	return err
-	    }
-	    stream.Write(pduBytes)
-	  default:
-	  	// continue listening to input
-	  }
+		switch msg {
+		case "exit":
+			return stream.Close()
+		case "list":
+			req := pdu.NewPDU(pdu.TYPE_LIST, []byte(""))
+			pduBytes, err := pdu.PduToBytes(req)
+			if err != nil {
+				log.Printf("[cli] error making pdu byte array %s", err)
+				return err
+			}
+			stream.Write(pduBytes)
+		default:
+			// continue listening to input
+		}
 
-  }
-  // end of user input
+	}
+	// end of user input
 
-
-  //return nil
+	//return nil
 	return stream.Close()
 }

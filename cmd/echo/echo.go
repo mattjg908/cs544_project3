@@ -4,8 +4,8 @@ import (
 	"flag"
 
 	"drexel.edu/net-quic/pkg/client"
-	"drexel.edu/net-quic/pkg/server"
 	"drexel.edu/net-quic/pkg/pdu"
+	"drexel.edu/net-quic/pkg/server"
 )
 
 var (
@@ -15,8 +15,8 @@ var (
 	MODE_SERVER  = false
 	CERT_FILE    = ""
 	PORT_NUMBER  = 4242
-  MTYPE        = ""
-  DATA         = ""
+	MTYPE        = ""
+	DATA         = ""
 
 	//SERVER PARAMETERS
 	SERVER_IP = "0.0.0.0"
@@ -72,19 +72,19 @@ func main() {
 		}
 		client := client.NewClient(clientConfig)
 
-    /* 
-       it's nicer for the user to do:
-       $ go run cmd/echo/echo.go -client -mtype=connect
+		/*
+		   it's nicer for the user to do:
+		   $ go run cmd/echo/echo.go -client -mtype=connect
 
-       rather than:
-       $ go run cmd/echo/echo.go -client -mtype=2
-    */
-	  switch MTYPE {
-	  case "connect":
-	  	client.Run(pdu.TYPE_CLIENT_CONNECT, DATA)
-	  default:
-	  	client.Run(pdu.TYPE_DATA, DATA)
-	  }
+		   rather than:
+		   $ go run cmd/echo/echo.go -client -mtype=2
+		*/
+		switch MTYPE {
+		case "connect":
+			client.Run(pdu.TYPE_CLIENT_CONNECT, DATA)
+		default:
+			client.Run(pdu.TYPE_DATA, DATA)
+		}
 
 	} else {
 		serverConfig := server.ServerConfig{
