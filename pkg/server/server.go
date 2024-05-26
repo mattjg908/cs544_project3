@@ -16,6 +16,9 @@ const (
 	// Temp. hardcoded values
 	PASSWORD = "password123"
 )
+type contextKey string
+
+const nicknamesKey contextKey = "nicknames"
 
 type ServerConfig struct {
 	GenTLS   bool
@@ -36,7 +39,8 @@ func NewServer(cfg ServerConfig) *Server {
 		cfg: cfg,
 	}
 	server.tls = server.getTLS()
-	server.ctx = context.TODO()
+  // so we can administrate the connected clients
+	server.ctx = context.WithValue(context.Background(), nicknamesKey, []string{})
 	return server
 }
 
@@ -111,19 +115,37 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 		// Split the data out so we can parse it
 		params := strings.Split(string(data.Data), "|")
 
-		if data.Mtype == pdu.TYPE_CLIENT_CONNECT {
+		switch data.Mtype {
+		case pdu.TYPE_CLIENT_CONNECT:
 			if params[1] == "password123" {
-				// TODO- set some kind of auth somewhere, maybe the context?
-				// TODO- make use of nickname (params[0]) too
 				fmt.Println("Password is correct")
+        s.addNickname(params[0])
 			} else {
 				// Close connection if password is wrong
 				fmt.Println("incorrect or unknown credentials")
 				return stream.Close()
 			}
-		}
+		case pdu.TYPE_LIST:
+			nicknames := s.getNicknames()
 
-		// TODO- close stream if user not auth'd, maybe this is stored in context?
+			nicknamesData := strings.Join(nicknames, ",")
+		  fmt.Printf("----%s-----", nicknamesData)
+			rspPdu := pdu.PDU{
+				Mtype: pdu.TYPE_DATA,
+				Len:   uint32(len(nicknamesData)),
+				Data:  []byte(nicknamesData),
+			}
+
+			rspBytes, err := pdu.PduToBytes(&rspPdu)
+			if err != nil {
+				log.Printf("[server] Error encoding PDU: %s", err)
+				break
+			}
+			stream.Write(rspBytes)
+
+     default:
+       continue
+    }
 
 		log.Printf("[server] Data In: [%s] %s",
 			data.GetTypeAsString(), string(data.Data))
@@ -153,4 +175,31 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 		}
 
 	}
+}
+
+func (s *Server) addNickname(nickname string) {
+	s.ctx = s.updateNicknamesContext(nickname, true)
+}
+
+func (s *Server) removeNickname(nickname string) {
+	s.ctx = s.updateNicknamesContext(nickname, false)
+}
+
+func (s *Server) updateNicknamesContext(nickname string, add bool) context.Context {
+	nicknames := s.getNicknames()
+	if add {
+		nicknames = append(nicknames, nickname)
+	} else {
+		for i, n := range nicknames {
+			if n == nickname {
+				nicknames = append(nicknames[:i], nicknames[i+1:]...)
+				break
+			}
+		}
+	}
+	return context.WithValue(s.ctx, nicknamesKey, nicknames)
+}
+
+func (s *Server) getNicknames() []string {
+	return s.ctx.Value(nicknamesKey).([]string)
 }
