@@ -92,63 +92,65 @@ func (s *Server) streamHandler(sess quic.Connection) {
 }
 
 func (s *Server) protocolHandler(stream quic.Stream) error {
-	//THIS IS WHERE YOU START HANDLING YOUR APP PROTOCOL
-	buff := pdu.MakePduBuffer()
+        for {
+	        //THIS IS WHERE YOU START HANDLING YOUR APP PROTOCOL
+	        buff := pdu.MakePduBuffer()
 
-	n, err := stream.Read(buff)
-	if err != nil {
-		log.Printf("[server] Error Reading Raw Data: %s", err)
-		return err
-	}
+	        n, err := stream.Read(buff)
+	        if err != nil {
+	        	log.Printf("[server] Error Reading Raw Data: %s", err)
+	        	return err
+	        }
 
-	data, err := pdu.PduFromBytes(buff[:n])
-	if err != nil {
-		log.Printf("[server] Error decoding PDU: %s", err)
-		return err
-	}
+	        data, err := pdu.PduFromBytes(buff[:n])
+	        if err != nil {
+	        	log.Printf("[server] Error decoding PDU: %s", err)
+	        	return err
+	        }
 
-  // Split the data out so we can parse it
-  params := strings.Split(string(data.Data), "|")
+          // Split the data out so we can parse it
+          params := strings.Split(string(data.Data), "|")
 
-	if data.Mtype == pdu.TYPE_CLIENT_CONNECT {
-		if params[1] == "password123" {
-      // TODO- set some kind of auth somewhere, maybe the context?
-      // TODO- make use of nickname (params[0]) too
-			fmt.Println("Password is correct")
-		} else {
-		  // Close connection if password is wrong
-			fmt.Println("incorrect or unknown credentials")
-	    return stream.Close()
-		}
-	}
+	        if data.Mtype == pdu.TYPE_CLIENT_CONNECT {
+	        	if params[1] == "password123" {
+              // TODO- set some kind of auth somewhere, maybe the context?
+              // TODO- make use of nickname (params[0]) too
+	        		fmt.Println("Password is correct")
+	        	} else {
+	        	  // Close connection if password is wrong
+	        		fmt.Println("incorrect or unknown credentials")
+	            return stream.Close()
+	        	}
+	        }
 
-  // TODO- close stream if user not auth'd, maybe this is stored in context?
+          // TODO- close stream if user not auth'd, maybe this is stored in context?
 
-	log.Printf("[server] Data In: [%s] %s",
-		data.GetTypeAsString(), string(data.Data))
+	        log.Printf("[server] Data In: [%s] %s",
+	        	data.GetTypeAsString(), string(data.Data))
 
-	//Now lets echo it back
-	rspMsg := fmt.Sprintf("ack: FromServer Echo-%s",
-		string(data.Data))
+	        //Now lets echo it back
+	        rspMsg := fmt.Sprintf("ack: FromServer Echo-%s",
+	        	string(data.Data))
 
-	rspPdu := pdu.PDU{
-		Mtype: pdu.TYPE_DATA | pdu.TYPE_ACK,
-		Len:   uint32(len(rspMsg)),
-		Data:  []byte(rspMsg),
-	}
+	        rspPdu := pdu.PDU{
+	        	Mtype: pdu.TYPE_DATA | pdu.TYPE_ACK,
+	        	Len:   uint32(len(rspMsg)),
+	        	Data:  []byte(rspMsg),
+	        }
 
-	fmt.Printf("Server-> %v", rspPdu)
+	        fmt.Printf("Server-> %v", rspPdu)
 
-	rspBytes, err := pdu.PduToBytes(&rspPdu)
-	if err != nil {
-		log.Printf("[server] Error encoding PDU: %s", err)
-		return err
-	}
+	        rspBytes, err := pdu.PduToBytes(&rspPdu)
+	        if err != nil {
+	        	log.Printf("[server] Error encoding PDU: %s", err)
+	        	return err
+	        }
 
-	_, err = stream.Write(rspBytes)
-	if err != nil {
-		log.Printf("[server] Error sending response: %s", err)
-		return err
-	}
-	return nil
+	        _, err = stream.Write(rspBytes)
+	        if err != nil {
+	        	log.Printf("[server] Error sending response: %s", err)
+	        	return err
+	        }
+
+  }
 }
