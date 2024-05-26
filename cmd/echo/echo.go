@@ -72,10 +72,11 @@ func main() {
 		}
 		client := client.NewClient(clientConfig)
 
-    /* it's nicer for the user to do
+    /* 
+       it's nicer for the user to do:
        $ go run cmd/echo/echo.go -client -mtype=connect
 
-       rather than
+       rather than:
        $ go run cmd/echo/echo.go -client -mtype=2
     */
 	  switch MTYPE {

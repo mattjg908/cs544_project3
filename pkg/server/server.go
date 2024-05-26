@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"strings"
 
 	"drexel.edu/net-quic/pkg/pdu"
 	"drexel.edu/net-quic/pkg/util"
@@ -12,7 +13,7 @@ import (
 )
 const (
 	// Temp. hardcoded values
-	USER_PWD = "password123"
+	PASSWORD = "password123"
 
 )
 
@@ -105,6 +106,23 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 		log.Printf("[server] Error decoding PDU: %s", err)
 		return err
 	}
+
+  // Split the data out so we can parse it
+  params := strings.Split(string(data.Data), "|")
+
+	if data.Mtype == pdu.TYPE_CLIENT_CONNECT {
+		if params[1] == "password123" {
+      // TODO- set some kind of auth somewhere, maybe the context?
+      // TODO- make use of nickname (params[0]) too
+			fmt.Println("Password is correct")
+		} else {
+		  // Close connection if password is wrong
+			fmt.Println("incorrect or unknown credentials")
+	    return stream.Close()
+		}
+	}
+
+  // TODO- close stream if user not auth'd, maybe this is stored in context?
 
 	log.Printf("[server] Data In: [%s] %s",
 		data.GetTypeAsString(), string(data.Data))
