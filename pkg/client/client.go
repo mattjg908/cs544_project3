@@ -1,10 +1,13 @@
 package client
 
 import (
+  "bufio"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
+  "os"
+  "strings"
 
 	"drexel.edu/net-quic/pkg/pdu"
 	"drexel.edu/net-quic/pkg/util"
@@ -92,5 +95,18 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	log.Printf("[cli] got response: %s", rsp.ToJsonString())
 	log.Printf("[cli] decoded string: %s", rspDataString)
 
+  // start of user input
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Println("Enter messages to send to the server. Type 'exit' to quit.")
+	for scanner.Scan() {
+		msg := scanner.Text()
+		if strings.ToLower(msg) == "exit" {
+			break
+		}
+  }
+  // end of user input
+
+
+  //return nil
 	return stream.Close()
 }
