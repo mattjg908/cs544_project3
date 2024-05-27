@@ -94,6 +94,23 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	log.Printf("[cli] got response: %s", rsp.ToJsonString())
 	log.Printf("[cli] decoded string: %s", rspDataString)
 
+	// Goroutine to listen for messages from the server
+	go func() {
+		for {
+			n, err := stream.Read(buffer)
+			if err != nil {
+				log.Printf("error reading from stream: %s", err)
+				break
+			}
+			rsp, err := pdu.PduFromBytes(buffer[:n])
+			if err != nil {
+				log.Printf("[cli] error converting pdu from bytes %s", err)
+				continue
+			}
+			rspDataString := string(rsp.Data)
+			log.Printf("[cli] Message from server: %s", rspDataString)
+		}
+	}()
 	// start of user input
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("Enter messages to send to the server. Type 'exit' to quit.")
@@ -139,5 +156,6 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	}
 	// end of user input
 
+	log.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	return stream.Close()
 }
