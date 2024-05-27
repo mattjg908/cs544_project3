@@ -129,20 +129,6 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 				return err
 			}
 			stream.Write(pduBytes)
-
-			n, err1 := stream.Read(buffer)
-			if err1 != nil {
-				log.Printf("error reading buffer %s", err)
-				return err
-			}
-			rsp, err2 := pdu.PduFromBytes(buffer[:n])
-			if err2 != nil {
-				log.Printf("[cli] error making pdu byte array %s", err)
-				return err
-			}
-			log.Printf("[cli] Connected Users: %s", rsp.Data)
-
-			// direct message
 		default:
 			req := pdu.NewPDU(pdu.TYPE_DM, []byte(msg))
 			pduBytes, err := pdu.PduToBytes(req)
@@ -156,6 +142,5 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	}
 	// end of user input
 
-	log.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	return stream.Close()
 }
