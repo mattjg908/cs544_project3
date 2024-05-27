@@ -16,6 +16,7 @@ const (
 	// Temp. hardcoded values
 	PASSWORD = "password123"
 )
+
 type contextKey string
 
 const nicknamesKey contextKey = "nicknames"
@@ -39,7 +40,7 @@ func NewServer(cfg ServerConfig) *Server {
 		cfg: cfg,
 	}
 	server.tls = server.getTLS()
-  // so we can administrate the connected clients
+	// so we can administrate the connected clients
 	server.ctx = context.WithValue(context.Background(), nicknamesKey, []string{})
 	return server
 }
@@ -119,7 +120,31 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 		case pdu.TYPE_CLIENT_CONNECT:
 			if params[1] == "password123" {
 				fmt.Println("Password is correct")
-        s.addNickname(params[0])
+				s.addNickname(params[0])
+
+				//Now lets echo it back
+				rspMsg := fmt.Sprintf("ack: FromServer Echo-%s",
+					string(data.Data))
+
+				rspPdu := pdu.PDU{
+					Mtype: pdu.TYPE_DATA | pdu.TYPE_ACK,
+					Len:   uint32(len(rspMsg)),
+					Data:  []byte(rspMsg),
+				}
+
+				fmt.Printf("Server-> %v", rspPdu)
+
+				rspBytes, err := pdu.PduToBytes(&rspPdu)
+				if err != nil {
+					log.Printf("[server] Error encoding PDU: %s", err)
+					return err
+				}
+
+				_, err = stream.Write(rspBytes)
+				if err != nil {
+					log.Printf("[server] Error sending response: %s", err)
+					return err
+				}
 			} else {
 				// Close connection if password is wrong
 				fmt.Println("incorrect or unknown credentials")
@@ -129,7 +154,6 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 			nicknames := s.getNicknames()
 
 			nicknamesData := strings.Join(nicknames, ",")
-		  fmt.Printf("----%s-----", nicknamesData)
 			rspPdu := pdu.PDU{
 				Mtype: pdu.TYPE_DATA,
 				Len:   uint32(len(nicknamesData)),
@@ -143,37 +167,12 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 			}
 			stream.Write(rspBytes)
 
-     default:
-       continue
-    }
+		default:
+			continue
+		}
 
 		log.Printf("[server] Data In: [%s] %s",
 			data.GetTypeAsString(), string(data.Data))
-
-		//Now lets echo it back
-		rspMsg := fmt.Sprintf("ack: FromServer Echo-%s",
-			string(data.Data))
-
-		rspPdu := pdu.PDU{
-			Mtype: pdu.TYPE_DATA | pdu.TYPE_ACK,
-			Len:   uint32(len(rspMsg)),
-			Data:  []byte(rspMsg),
-		}
-
-		fmt.Printf("Server-> %v", rspPdu)
-
-		rspBytes, err := pdu.PduToBytes(&rspPdu)
-		if err != nil {
-			log.Printf("[server] Error encoding PDU: %s", err)
-			return err
-		}
-
-		_, err = stream.Write(rspBytes)
-		if err != nil {
-			log.Printf("[server] Error sending response: %s", err)
-			return err
-		}
-
 	}
 }
 

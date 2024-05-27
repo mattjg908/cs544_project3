@@ -100,10 +100,10 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	for scanner.Scan() {
 		msg := scanner.Text()
 		switch msg {
-    // exit
+		// exit
 		case "exit":
 			return stream.Close()
-    // list
+			// list
 		case "list":
 			req := pdu.NewPDU(pdu.TYPE_LIST, []byte(""))
 			pduBytes, err := pdu.PduToBytes(req)
@@ -113,20 +113,19 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			}
 			stream.Write(pduBytes)
 
-	     n, err1 := stream.Read(buffer)
+			n, err1 := stream.Read(buffer)
 			if err1 != nil {
 				log.Printf("error reading buffer %s", err)
 				return err
 			}
-	     rsp, err2 := pdu.PduFromBytes(buffer[:n])
+			rsp, err2 := pdu.PduFromBytes(buffer[:n])
 			if err2 != nil {
 				log.Printf("[cli] error making pdu byte array %s", err)
 				return err
 			}
-	     rspDataString := string(rsp.Data)
-	     log.Printf("[cli] Connected Users: %s", rsp.Data)
-	     fmt.Printf("----%s-----", rspDataString)
-    // default
+			log.Printf("[cli] Connected Users: %s", rsp.Data)
+
+			// default
 		default:
 			//continue
 		}
