@@ -33,11 +33,13 @@ type Server struct {
 	cfg ServerConfig
 	tls *tls.Config
 	ctx context.Context
+  clients  map[string]quic.Connection
 }
 
 func NewServer(cfg ServerConfig) *Server {
 	server := &Server{
 		cfg: cfg,
+    clients: make(map[string]quic.Connection),
 	}
 	server.tls = server.getTLS()
 	// so we can administrate the connected clients
@@ -92,11 +94,11 @@ func (s *Server) streamHandler(sess quic.Connection) {
 		}
 
 		//Handle protocol activity on stream
-		s.protocolHandler(stream)
+		s.protocolHandler(stream, sess)
 	}
 }
 
-func (s *Server) protocolHandler(stream quic.Stream) error {
+func (s *Server) protocolHandler(stream quic.Stream, sess quic.Connection) error {
 	for {
 		//THIS IS WHERE YOU START HANDLING YOUR APP PROTOCOL
 		buff := pdu.MakePduBuffer()
@@ -120,7 +122,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 		case pdu.TYPE_CLIENT_CONNECT:
 			if params[1] == "password123" {
 				fmt.Println("Password is correct")
-				s.addNickname(params[0])
+				s.addClient(params[0], sess)
 
 				//Now lets echo it back
 				rspMsg := fmt.Sprintf("ack: FromServer Echo-%s",
@@ -151,6 +153,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 				return stream.Close()
 			}
 		case pdu.TYPE_LIST:
+      // TODO- reject if not auth'd
 			nicknames := s.getNicknames()
 
 			nicknamesData := strings.Join(nicknames, ",")
@@ -174,6 +177,15 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 		log.Printf("[server] Data In: [%s] %s",
 			data.GetTypeAsString(), string(data.Data))
 	}
+}
+
+/*
+  Functions from ChatGPT to work with Go's Context package
+*/
+
+func (s *Server) addClient(nickname string, conn quic.Connection) {
+	s.clients[nickname] = conn
+	s.addNickname(nickname)
 }
 
 func (s *Server) addNickname(nickname string) {
