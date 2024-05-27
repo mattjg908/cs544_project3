@@ -30,16 +30,16 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	cfg ServerConfig
-	tls *tls.Config
-	ctx context.Context
-  clients  map[string]quic.Connection
+	cfg     ServerConfig
+	tls     *tls.Config
+	ctx     context.Context
+	clients map[string]quic.Connection
 }
 
 func NewServer(cfg ServerConfig) *Server {
 	server := &Server{
-		cfg: cfg,
-    clients: make(map[string]quic.Connection),
+		cfg:     cfg,
+		clients: make(map[string]quic.Connection),
 	}
 	server.tls = server.getTLS()
 	// so we can administrate the connected clients
@@ -153,7 +153,7 @@ func (s *Server) protocolHandler(stream quic.Stream, sess quic.Connection) error
 				return stream.Close()
 			}
 		case pdu.TYPE_LIST:
-      // TODO- reject if not auth'd
+			// TODO- reject if not auth'd
 			nicknames := s.getNicknames()
 
 			nicknamesData := strings.Join(nicknames, ",")
@@ -169,6 +169,9 @@ func (s *Server) protocolHandler(stream quic.Stream, sess quic.Connection) error
 				break
 			}
 			stream.Write(rspBytes)
+
+		case pdu.TYPE_DM:
+			s.sendPrivateMessage(params[0], params[1])
 
 		default:
 			continue
@@ -186,6 +189,41 @@ func (s *Server) protocolHandler(stream quic.Stream, sess quic.Connection) error
 func (s *Server) addClient(nickname string, conn quic.Connection) {
 	s.clients[nickname] = conn
 	s.addNickname(nickname)
+}
+
+func (s *Server) sendPrivateMessage(recipient, message string) {
+	conn, exists := s.clients[recipient]
+
+	if !exists {
+		log.Printf("[server] Recipient %s not found", recipient)
+		return
+	}
+
+	stream, err := conn.OpenStream()
+	if err != nil {
+		log.Printf("[server] Error opening stream to %s: %s", recipient, err)
+		return
+	}
+
+	rspPdu := pdu.PDU{
+		Mtype: pdu.TYPE_DATA,
+		Len:   uint32(len(message)),
+		Data:  []byte(message),
+	}
+
+	rspBytes, err := pdu.PduToBytes(&rspPdu)
+	if err != nil {
+		log.Printf("[server] Error encoding PDU: %s", err)
+		return
+	}
+
+	_, err = stream.Write(rspBytes)
+	if err != nil {
+		log.Printf("[server] Error sending private message to %s: %s", recipient, err)
+		return
+	}
+
+	log.Printf("[server] Private message sent to %s: %s", recipient, message)
 }
 
 func (s *Server) addNickname(nickname string) {

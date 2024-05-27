@@ -125,9 +125,15 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			}
 			log.Printf("[cli] Connected Users: %s", rsp.Data)
 
-			// default
+			// direct message
 		default:
-			//continue
+			req := pdu.NewPDU(pdu.TYPE_DM, []byte(msg))
+			pduBytes, err := pdu.PduToBytes(req)
+			if err != nil {
+				log.Printf("[cli] error making pdu byte array %s", err)
+				return err
+			}
+			stream.Write(pduBytes)
 		}
 
 	}
