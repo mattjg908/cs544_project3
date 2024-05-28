@@ -124,14 +124,13 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 				fmt.Println("Password is correct")
 				s.addClient(params[0], stream)
 
-				//Now lets echo it back
-				rspMsg := fmt.Sprintf("ack: FromServer Echo-%s",
-					string(data.Data))
-
+				// return the nickname so the client can store it, this is used for
+				// so the client can send a message to another client and the sender
+				// can be tracked
 				rspPdu := pdu.PDU{
 					Mtype: pdu.TYPE_DATA | pdu.TYPE_ACK,
-					Len:   uint32(len(rspMsg)),
-					Data:  []byte(rspMsg),
+					Len:   uint32(len(params[0])),
+					Data:  []byte(params[0]),
 				}
 
 				fmt.Printf("Server-> %v", rspPdu)
@@ -171,7 +170,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 			stream.Write(rspBytes)
 
 		case pdu.TYPE_DM:
-			s.sendPrivateMessage(params[0], params[1])
+			s.sendPrivateMessage(params[0], params[1], params[2])
 
 		default:
 			continue
@@ -191,7 +190,7 @@ func (s *Server) addClient(nickname string, stream quic.Stream) {
 	s.addNickname(nickname)
 }
 
-func (s *Server) sendPrivateMessage(recipient, message string) {
+func (s *Server) sendPrivateMessage(recipient, message string, sender string) {
 	stream, exists := s.clients[recipient]
 
 	if !exists {
@@ -201,8 +200,8 @@ func (s *Server) sendPrivateMessage(recipient, message string) {
 
 	rspPdu := pdu.PDU{
 		Mtype: pdu.TYPE_DATA,
-		Len:   uint32(len(message)),
-		Data:  []byte(message),
+		Len:   uint32(len(sender + ": " + message)),
+		Data:  []byte(sender + ": " + message),
 	}
 
 	rspBytes, err := pdu.PduToBytes(&rspPdu)

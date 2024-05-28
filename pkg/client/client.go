@@ -20,10 +20,11 @@ type ClientConfig struct {
 }
 
 type Client struct {
-	cfg  ClientConfig
-	tls  *tls.Config
-	conn quic.Connection
-	ctx  context.Context
+	cfg      ClientConfig
+	tls      *tls.Config
+	conn     quic.Connection
+	ctx      context.Context
+	nickname string
 }
 
 func NewClient(cfg ClientConfig) *Client {
@@ -90,9 +91,9 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 		log.Printf("[cli] error converting pdu from bytes %s", err)
 		return err
 	}
-	rspDataString := string(rsp.Data)
+	c.nickname = string(rsp.Data)
 	log.Printf("[cli] got response: %s", rsp.ToJsonString())
-	log.Printf("[cli] decoded string: %s", rspDataString)
+	//log.Printf("[cli] decoded string: %s", rspDataString)
 
 	// Goroutine to listen for messages from the server
 	go func() {
@@ -108,7 +109,7 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 				continue
 			}
 			rspDataString := string(rsp.Data)
-			log.Printf("[cli] Message from server: %s", rspDataString)
+			log.Printf(rspDataString)
 		}
 	}()
 	// start of user input
@@ -130,7 +131,7 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			}
 			stream.Write(pduBytes)
 		default:
-			req := pdu.NewPDU(pdu.TYPE_DM, []byte(msg))
+			req := pdu.NewPDU(pdu.TYPE_DM, []byte(msg+"|"+c.nickname))
 			pduBytes, err := pdu.PduToBytes(req)
 			if err != nil {
 				log.Printf("[cli] error making pdu byte array %s", err)
