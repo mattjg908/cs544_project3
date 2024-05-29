@@ -26,6 +26,8 @@ type Client struct {
 	conn     quic.Connection
 	ctx      context.Context
 	nickname string
+	away     bool
+	authed   bool
 }
 
 func NewClient(cfg ClientConfig) *Client {
@@ -93,8 +95,8 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 		return err
 	}
 	c.nickname = string(rsp.Data)
+  c.authed   = true
 	log.Printf("[cli] got response: %s", rsp.ToJsonString())
-	//log.Printf("[cli] decoded string: %s", rspDataString)
 
 	// Goroutine to listen for messages from the server
 	go func() {
@@ -134,6 +136,7 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			return stream.Close()
 			// list
 		case "list":
+      c.checkIsAuthed(stream)
 			req := pdu.NewPDU(pdu.TYPE_LIST, []byte(""))
 			pduBytes, err := pdu.PduToBytes(req)
 			if err != nil {
@@ -142,6 +145,7 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			}
 			stream.Write(pduBytes)
 		default:
+      c.checkIsAuthed(stream)
 			req := pdu.NewPDU(pdu.TYPE_DM, []byte(msg+"|"+c.nickname))
 			pduBytes, err := pdu.PduToBytes(req)
 			if err != nil {
@@ -155,4 +159,11 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	// end of user input
 
 	return stream.Close()
+}
+
+func (c *Client) checkIsAuthed(stream quic.Stream) {
+      if !c.authed {
+			  log.Printf("Not authorized")
+        stream.Close()
+      }
 }
