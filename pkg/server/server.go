@@ -175,8 +175,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 			continue
 		}
 
-		log.Printf("[server] Data In: [%s] %s|***password***",
-			data.GetTypeAsString(), string(params[0]))
+		log.Printf("[server] Data In: [%s]", data.GetTypeAsString())
 	}
 }
 
