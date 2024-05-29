@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"drexel.edu/net-quic/pkg/pdu"
 	"drexel.edu/net-quic/pkg/util"
@@ -110,6 +111,16 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			}
 			rspDataString := string(rsp.Data)
 			log.Printf(rspDataString)
+		}
+	}()
+
+	// Goroutine to ping server to keep connection alive
+	go func() {
+		for {
+			req := pdu.NewPDU(pdu.TYPE_PING, []byte(""))
+			pduBytes, _ := pdu.PduToBytes(req)
+			stream.Write(pduBytes)
+			time.Sleep(20 * time.Second)
 		}
 	}()
 	// start of user input
