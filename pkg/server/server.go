@@ -175,13 +175,13 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 			continue
 		}
 
-		log.Printf("[server] Data In: [%s] %s",
-			data.GetTypeAsString(), string(data.Data))
+		log.Printf("[server] Data In: [%s] %s|***password***",
+			data.GetTypeAsString(), string(params[0]))
 	}
 }
 
 /*
-  Some functions are modified from ChatGPT and examples found online
+  SOME functions below are modified from ChatGPT and/or examples found online
 */
 
 func (s *Server) addClient(nickname string, stream quic.Stream) {

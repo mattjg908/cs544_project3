@@ -2,10 +2,17 @@
 
 There is a single binary that is used to run both the client and the server
 
-- `server`: `go run cmd/echo/echo.go -server`
+- `server`:
+  - to start a server:
+    - `go run cmd/echo/echo.go -server`
+  - to start a second server, use a different port number (and/or server-ip):
+    - `go run cmd/echo/echo.go -server -port=4243`
+
 - `client`:
   - to connect:
     - `go run cmd/echo/echo.go -client -mtype=connect -data="some_nickname|password123"`
+  - to connect to a different server, pass that server's port number (and/or server-ip):
+    - `go run cmd/echo/echo.go -client -mtype=connect -data="bar|password123" -port=4243`
   - to message another client:
     - a second client must connect, then
     - `go run cmd/echo/echo.go -client -mtype=connect -data="some_nickname|hello some_nickname"`
