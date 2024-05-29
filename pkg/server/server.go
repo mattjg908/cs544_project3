@@ -152,7 +152,6 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 				return stream.Close()
 			}
 		case pdu.TYPE_LIST:
-			// TODO- reject if not auth'd
 			nicknames := s.getNicknames()
 
 			nicknamesData := strings.Join(nicknames, ",")
@@ -182,7 +181,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 }
 
 /*
-  Functions from ChatGPT to work with Go's Context package
+  Some functions are modified from ChatGPT and examples found online
 */
 
 func (s *Server) addClient(nickname string, stream quic.Stream) {

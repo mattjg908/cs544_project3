@@ -63,6 +63,7 @@ func (c *Client) Run(mtype uint8, s string) error {
 }
 
 func (c *Client) protocolHandler(mtype uint8, s string) error {
+	// Start connecting to server
 	stream, err := c.conn.OpenStreamSync(c.ctx)
 	if err != nil {
 		log.Printf("[cli] error opening stream %s", err)
@@ -81,7 +82,6 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 		log.Printf("[cli] error writing to stream %s", err)
 		return err
 	}
-	log.Printf("[cli] wrote %d bytes to stream", n)
 
 	buffer := pdu.MakePduBuffer()
 	n, err = stream.Read(buffer)
@@ -94,65 +94,36 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 		log.Printf("[cli] error converting pdu from bytes %s", err)
 		return err
 	}
-	c.nickname = string(rsp.Data)
+	// connecting to server complete
+
+	// naive auth approach, naturally this would be different in a "real" app. If
+	// we got here, the password was correct when we attempted server connection
 	c.authed = true
-	log.Printf("[cli] got response: %s", rsp.ToJsonString())
 
-	// Goroutine to listen for messages from the server
-	go func() {
-		for {
-			n, err := stream.Read(buffer)
-			if err != nil {
-				log.Printf("error reading from stream: %s", err)
-				break
-			}
-			rsp, err := pdu.PduFromBytes(buffer[:n])
-			if err != nil {
-				log.Printf("[cli] error converting pdu from bytes %s", err)
-				continue
-			}
-			rspDataString := string(rsp.Data)
-			log.Printf(rspDataString)
-		}
-	}()
+	// we get the nickname back from server once we connect, we track this so we
+	// can include our nickname when DMing another client, that way the recipient
+	// knows who sent it the message
+	c.nickname = string(rsp.Data)
 
-	// Goroutine to ping server to keep connection alive
-	go func() {
-		for {
-			req := pdu.NewPDU(pdu.TYPE_PING, []byte(""))
-			pduBytes, _ := pdu.PduToBytes(req)
-			stream.Write(pduBytes)
-			time.Sleep(20 * time.Second)
-		}
-	}()
-	// start of user input
+	// listen in the background for direct messages
+	go ListenForDirectMessages(stream, buffer)
+
+	// ping server in the background to keep connection alive
+	go pingServer(stream)
+
+	// start of user chat input
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("Enter messages to send to the server. Type 'exit' to quit.")
 	for scanner.Scan() {
 		msg := scanner.Text()
 		switch msg {
-		// exit
 		case "exit":
 			return stream.Close()
-			// list
 		case "list":
-			c.checkIsAuthed(stream)
-			req := pdu.NewPDU(pdu.TYPE_LIST, []byte(""))
-			pduBytes, err := pdu.PduToBytes(req)
-			if err != nil {
-				log.Printf("[cli] error making pdu byte array %s", err)
-				return err
-			}
-			stream.Write(pduBytes)
+			c.writeIoToStream(stream, pdu.TYPE_LIST, "")
+			// direct messages
 		default:
-			c.checkIsAuthed(stream)
-			req := pdu.NewPDU(pdu.TYPE_DM, []byte(msg+"|"+c.nickname))
-			pduBytes, err := pdu.PduToBytes(req)
-			if err != nil {
-				log.Printf("[cli] error making pdu byte array %s", err)
-				return err
-			}
-			stream.Write(pduBytes)
+			c.writeIoToStream(stream, pdu.TYPE_DM, msg+"|"+c.nickname)
 		}
 
 	}
@@ -161,9 +132,49 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	return stream.Close()
 }
 
+func (c *Client) writeIoToStream(stream quic.Stream, pduType uint8, msg string) {
+	c.checkIsAuthed(stream)
+
+	req := pdu.NewPDU(pduType, []byte(msg))
+	pduBytes, err := pdu.PduToBytes(req)
+
+	if err != nil {
+		log.Printf("[cli] error making pdu byte array %s", err)
+	}
+
+	stream.Write(pduBytes)
+}
+
 func (c *Client) checkIsAuthed(stream quic.Stream) {
 	if !c.authed {
 		log.Printf("Not authorized")
 		stream.Close()
+	}
+}
+
+func ListenForDirectMessages(stream quic.Stream, buffer []byte) {
+	for {
+		n, err := stream.Read(buffer)
+		if err != nil {
+			log.Printf("error reading from stream: %s", err)
+			break
+		}
+		rsp, err := pdu.PduFromBytes(buffer[:n])
+		if err != nil {
+			log.Printf("[cli] error converting pdu from bytes %s", err)
+			continue
+		}
+		rspDataString := string(rsp.Data)
+		log.Printf(rspDataString)
+	}
+}
+
+// keep connection to server alive
+func pingServer(stream quic.Stream) {
+	for {
+		req := pdu.NewPDU(pdu.TYPE_PING, []byte(""))
+		pduBytes, _ := pdu.PduToBytes(req)
+		stream.Write(pduBytes)
+		time.Sleep(20 * time.Second)
 	}
 }
