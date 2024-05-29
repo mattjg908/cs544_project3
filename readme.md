@@ -11,6 +11,10 @@ There is a single binary that is used to run both the client and the server
     - `go run cmd/echo/echo.go -client -mtype=connect -data="some_nickname|hello some_nickname"`
   - to list connected clients:
     - after connecting, `list`
+  - to toggle being away
+    - after connecting, `away`
+      - this marks you as "away", the app will auto-respond to messages
+    - typing `away` again will unmark you as away and will stop auto-responding
 - `help on all flags`: `go run cmd/echo/echo.go -help`
 
 The server will wait for a connection, just a simple echo.  This solution uses goroutines and is concurrent.

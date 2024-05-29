@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"drexel.edu/net-quic/pkg/pdu"
@@ -106,7 +107,7 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 	c.nickname = string(rsp.Data)
 
 	// listen in the background for direct messages
-	go ListenForDirectMessages(stream, buffer)
+	go c.ListenForDirectMessages(stream, buffer)
 
 	// ping server in the background to keep connection alive
 	go pingServer(stream)
@@ -121,6 +122,8 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 			return stream.Close()
 		case "list":
 			c.writeIoToStream(stream, pdu.TYPE_LIST, "")
+		case "away":
+			c.away = !c.away
 			// direct messages
 		default:
 			c.writeIoToStream(stream, pdu.TYPE_DM, msg+"|"+c.nickname)
@@ -152,7 +155,7 @@ func (c *Client) checkIsAuthed(stream quic.Stream) {
 	}
 }
 
-func ListenForDirectMessages(stream quic.Stream, buffer []byte) {
+func (c *Client) ListenForDirectMessages(stream quic.Stream, buffer []byte) {
 	for {
 		n, err := stream.Read(buffer)
 		if err != nil {
@@ -166,6 +169,13 @@ func ListenForDirectMessages(stream quic.Stream, buffer []byte) {
 		}
 		rspDataString := string(rsp.Data)
 		log.Printf(rspDataString)
+
+		if c.away {
+			// Parse out sender's name, so we can reply "I am away" to them
+			params := strings.Split(string(rspDataString), ":")
+
+			c.writeIoToStream(stream, pdu.TYPE_DM, params[0]+"|"+"I am away"+"|"+c.nickname)
+		}
 	}
 }
 
