@@ -158,10 +158,11 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 				fmt.Println("incorrect or unknown credentials")
 				return stream.Close()
 			}
-		case pdu.TYPE_LIST:
+		case pdu.TYPE_PEER_LIST:
 			nicknames := s.getNicknames()
 
 			nicknamesData := strings.Join(nicknames, ",")
+
 			rspPdu := pdu.PDU{
 				Mtype: pdu.TYPE_DATA,
 				Len:   uint32(len(nicknamesData)),
@@ -169,6 +170,49 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 			}
 
 			rspBytes, err := pdu.PduToBytes(&rspPdu)
+			if err != nil {
+				log.Printf("[server] Error encoding PDU: %s", err)
+				break
+			}
+			stream.Write(rspBytes)
+
+		case pdu.TYPE_LIST:
+			nicknames := s.getNicknames()
+
+			nicknamesData := strings.Join(nicknames, ",")
+
+			rspPdu := pdu.PDU{
+				Mtype: pdu.TYPE_PEER_LIST,
+				Len:   uint32(len("")),
+				Data:  []byte(""),
+			}
+
+			rspBytes, err := pdu.PduToBytes(&rspPdu)
+			if err != nil {
+				log.Printf("[server] Error encoding PDU: %s", err)
+				break
+			}
+
+			if s.peerStream != nil {
+				s.peerStream.Write(rspBytes)
+				n, err := s.peerStream.Read(buff)
+				if err != nil {
+					log.Printf("[server] Error Reading Raw Data: %s", err)
+					return err
+				}
+
+				peerData, err := pdu.PduFromBytes(buff[:n])
+
+				nicknamesData = nicknamesData + "," + string(peerData.Data)
+			}
+
+			rspPdu = pdu.PDU{
+				Mtype: pdu.TYPE_DATA,
+				Len:   uint32(len(nicknamesData)),
+				Data:  []byte(nicknamesData),
+			}
+
+			rspBytes, err = pdu.PduToBytes(&rspPdu)
 			if err != nil {
 				log.Printf("[server] Error encoding PDU: %s", err)
 				break

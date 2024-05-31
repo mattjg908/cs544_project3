@@ -13,6 +13,7 @@ const (
 	TYPE_LIST           = 3
 	TYPE_DM             = 4
 	TYPE_PING           = 5
+	TYPE_PEER_LIST      = 6
 
 	MAX_PDU_SIZE = 1024
 )
@@ -49,6 +50,8 @@ func (pdu *PDU) GetTypeAsString() string {
 		return "****DM"
 	case TYPE_PING:
 		return "****PONG"
+	case TYPE_PEER_LIST:
+		return "****PEER LIST"
 	default:
 		return "UNKNOWN"
 	}
