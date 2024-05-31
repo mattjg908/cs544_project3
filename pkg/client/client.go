@@ -64,6 +64,9 @@ func (c *Client) Run(mtype uint8, s string) error {
 }
 
 func (c *Client) protocolHandler(mtype uint8, s string) error {
+	// The first bit of code is only related to connecting to a server. Once
+	// that connection is made, we can listen for messages and take user IO
+
 	// Start connecting to server
 	stream, err := c.conn.OpenStreamSync(c.ctx)
 	if err != nil {
@@ -99,6 +102,7 @@ func (c *Client) protocolHandler(mtype uint8, s string) error {
 
 	// naive auth approach, naturally this would be different in a "real" app. If
 	// we got here, the password was correct when we attempted server connection
+	// Being auth'd is part of the DFA
 	c.authed = true
 
 	// we get the nickname back from server once we connect, we track this so we

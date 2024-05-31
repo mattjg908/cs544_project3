@@ -28,8 +28,8 @@ type ServerConfig struct {
 	KeyFile  string
 	Address  string
 	Port     int
-	PeerAddr string // New field for peer server address
-	PeerPort int    // New field for peer server port
+	PeerAddr string
+	PeerPort int
 }
 
 type Server struct {
@@ -37,7 +37,7 @@ type Server struct {
 	tls        *tls.Config
 	ctx        context.Context
 	clients    map[string]quic.Stream
-	peerConn   quic.Connection // New field for peer server connection
+	peerConn   quic.Connection
 	peerStream quic.Stream
 }
 
@@ -158,6 +158,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 				fmt.Println("incorrect or unknown credentials")
 				return stream.Close()
 			}
+			// List nicknames on peer servers
 		case pdu.TYPE_PEER_LIST:
 			nicknames := s.getNicknames()
 
@@ -193,6 +194,7 @@ func (s *Server) protocolHandler(stream quic.Stream) error {
 				break
 			}
 
+			// if connected to a peer server, list connected clients there too
 			if s.peerStream != nil {
 				s.peerStream.Write(rspBytes)
 				n, err := s.peerStream.Read(buff)
@@ -278,6 +280,7 @@ func (s *Server) sendPrivateMessage(recipient, message string, sender string) {
 	log.Printf("[server] Private message sent to %s: %s", recipient, message)
 }
 
+// Just some helper functions to track connected clients
 func (s *Server) addNickname(nickname string) {
 	s.ctx = s.updateNicknamesContext(nickname, true)
 }
