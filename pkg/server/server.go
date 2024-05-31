@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"drexel.edu/net-quic/pkg/pdu"
 	"drexel.edu/net-quic/pkg/util"
@@ -27,13 +28,17 @@ type ServerConfig struct {
 	KeyFile  string
 	Address  string
 	Port     int
+	PeerAddr string // New field for peer server address
+	PeerPort int    // New field for peer server port
 }
 
 type Server struct {
-	cfg     ServerConfig
-	tls     *tls.Config
-	ctx     context.Context
-	clients map[string]quic.Stream
+	cfg        ServerConfig
+	tls        *tls.Config
+	ctx        context.Context
+	clients    map[string]quic.Stream
+	peerConn   quic.Connection // New field for peer server connection
+	peerStream quic.Stream
 }
 
 func NewServer(cfg ServerConfig) *Server {
@@ -70,6 +75,8 @@ func (s *Server) Run() error {
 		log.Printf("error listening: %s", err)
 		return err
 	}
+
+	go s.ConnectToPeerServer()
 
 	//SERVER LOOP
 	for {
@@ -189,10 +196,20 @@ func (s *Server) addClient(nickname string, stream quic.Stream) {
 }
 
 func (s *Server) sendPrivateMessage(recipient, message string, sender string) {
-	stream, exists := s.clients[recipient]
 
+	stream, exists := s.clients[recipient]
 	if !exists {
 		log.Printf("[server] Recipient %s not found", recipient)
+
+		// Reconstruct message, send it to other server(s)
+		rspPdu := pdu.PDU{
+			Mtype: pdu.TYPE_DM,
+			Len:   uint32(len(recipient + "|" + message + "|" + sender)),
+			Data:  []byte(recipient + "|" + message + "|" + sender),
+		}
+
+		rspBytes, _ := pdu.PduToBytes(&rspPdu)
+		s.peerStream.Write(rspBytes)
 		return
 	}
 
@@ -242,4 +259,48 @@ func (s *Server) updateNicknamesContext(nickname string, add bool) context.Conte
 
 func (s *Server) getNicknames() []string {
 	return s.ctx.Value(nicknamesKey).([]string)
+}
+
+func (s *Server) ConnectToPeerServer() error {
+	// hardcoded peer ports
+	var port int
+	if s.cfg.Port == 4242 {
+		port = 4243
+	} else {
+		port = 4242
+	}
+	peerAddr := fmt.Sprintf("%s:%d", "localhost", port)
+	tlsConfig := util.BuildTLSClientConfig()
+
+	conn, err := quic.DialAddr(s.ctx, peerAddr, tlsConfig, nil)
+	if err != nil {
+		log.Printf("[server] error dialing peer server: %s, have you started peer on port %d?", err, port)
+		time.Sleep(2 * time.Second)
+		// try again
+		s.ConnectToPeerServer()
+		return err
+	}
+
+	stream, err := conn.OpenStreamSync(s.ctx)
+	if err != nil {
+		log.Printf("[server] error opening stream to peer server: %s", err)
+		return err
+	}
+
+	s.peerConn = conn
+	s.peerStream = stream
+	log.Printf("[server] connected to peer server at %s", peerAddr)
+	// ping server to keep connection alive
+	go pingServer(stream)
+	return nil
+}
+
+// keep connection to server alive
+func pingServer(stream quic.Stream) {
+	for {
+		req := pdu.NewPDU(pdu.TYPE_PING, []byte(""))
+		pduBytes, _ := pdu.PduToBytes(req)
+		stream.Write(pduBytes)
+		time.Sleep(20 * time.Second)
+	}
 }
