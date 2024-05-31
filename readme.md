@@ -56,7 +56,7 @@ For testing:
 
 Solution derived from the excellent work of:
 - the `quic-go` team based on the example: https://github.com/quic-go/quic-go/tree/master/example/echo
-- the Go exmaple from Dr. Mitchell: https://github.com/ArchitectingSoftware/CS544-Class-Demo-Files/tree/main/quic/go
+- the Go example from Dr. Mitchell: https://github.com/ArchitectingSoftware/CS544-Class-Demo-Files/tree/main/quic/go
 
 ## Extra Credit Summary (as mentioned above):
 Focusing on implementation increased learning and resulted in needing to update my protocol specification in several ways. The biggest was that prior to implementation, I had a
